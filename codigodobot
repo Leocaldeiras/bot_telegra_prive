@@ -1,0 +1,82 @@
+import logging
+import os
+import time
+from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, ConversationHandler, CallbackContext
+
+# Definição dos estados da conversa
+START, WAITING_FOR_REGISTRATION, WAITING_FOR_VERIFICATION = range(3)
+
+# Configuração do logging
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    level=logging.INFO)
+
+logger = logging.getLogger(__name__)
+
+# Função para lidar com o comando /start
+def start(update: Update, context: CallbackContext) -> int:
+    update.message.reply_text(
+        "Olá! Para se cadastrar, clique no link a seguir e depois envie um print do cadastro para mim:\n"
+        "[https://parceiros.paratodosba.com/pagead?token=e7c29e669fd57c829b1d38e6f314630f]"
+    )
+    return WAITING_FOR_REGISTRATION
+
+# Função para lidar com a recepção do print do cadastro
+def registration_receipt(update: Update, context: CallbackContext) -> int:
+    if update.message.photo:
+        update.message.reply_text(
+            "Obrigado por enviar o print do cadastro! Aguarde enquanto verificamos."
+        )
+        # Aqui você pode adicionar a lógica para verificar o print do cadastro
+
+        # Simulação de verificação (aguarda 5 segundos)
+        time.sleep(5)
+
+        # Verificação bem-sucedida, conceda acesso ao canal privado
+        update.message.reply_text(
+            "Parabéns! Seu cadastro foi verificado com sucesso. Você agora tem acesso ao canal privado."
+        )
+        return ConversationHandler.END
+    else:
+        update.message.reply_text(
+            "Por favor, envie um print do cadastro."
+        )
+        return WAITING_FOR_REGISTRATION
+
+# Função para cancelar a operação
+def cancel(update: Update, context: CallbackContext) -> int:
+    update.message.reply_text(
+        "Operação cancelada."
+    )
+    return ConversationHandler.END
+
+# Função principal
+def main() -> None:
+    # Inicializa o bot
+    updater = Updater("6581864017:AAFgKw1cDurZgKKhgq4OrRyzb8y2HjPqLzY", use_context=True)
+
+    # Obtém o despachante para registrar manipuladores
+    dp = updater.dispatcher
+
+    # Define o estado da conversa
+    conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('start', start)],
+        states={
+            START: [],
+            WAITING_FOR_REGISTRATION: [MessageHandler(Filters.photo, registration_receipt)],
+            WAITING_FOR_VERIFICATION: [],
+        },
+        fallbacks=[CommandHandler('cancel', cancel)],
+    )
+
+    # Registra o manipulador da conversa
+    dp.add_handler(conv_handler)
+
+    # Inicia o bot
+    updater.start_polling()
+
+    # Executa o bot até que Ctrl+C seja pressionado
+    updater.idle()
+
+if __name__ == '__main__':
+    main()
